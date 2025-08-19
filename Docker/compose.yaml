@@ -1,0 +1,49 @@
+# Docker/compose.yaml
+services:
+  chimera:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
+      args:
+        - UID=1015
+        - GID=1015
+    image: chimera:cuda12.6
+    container_name: chimera-dev
+
+    # Режимы/лимиты для ML
+    ipc: host
+    shm_size: "32g"
+    ulimits:
+      memlock: -1
+
+    # Сеть и интерактив
+    network_mode: host
+    tty: true
+    stdin_open: true
+
+    # Графика/X11
+    environment:
+      - DISPLAY=${DISPLAY:-host.docker.internal:0}
+      - XAUTHORITY=/tmp/.Xauthority
+      - XDG_RUNTIME_DIR=/tmp/runtime-oversir
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - CLEARML_CONFIG_FILE=/home/oversir/.clearml.conf
+
+    volumes:
+      - ..:/home/oversir/workspace
+      - /mnt/vol2_raid/datasets/egowalk_publish/lerobot:/home/oversir/workspace/dataset
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/tmp/.Xauthority:ro
+      - ../configs/clearml.conf:/home/oversir/.clearml.conf:ro
+
+    # ✅ GPU через reservations.devices (совместимо с Compose v2)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]
+    command: >
+      bash -c "uv pip install -e '.[pl,clearml,viz,dev]' && exec bash"
