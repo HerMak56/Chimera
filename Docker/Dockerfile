@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libgl1-mesa-dri libegl1 \
     libglib2.0-0 libxext6 libsm6 libxrender1 \
     python3-tk qtbase5-dev python3-pyqt5 \
+    git \
  && rm -rf /var/lib/apt/lists/*
 
 # User
@@ -42,11 +43,15 @@ ENV PATH=${VENV_PATH}/bin:/usr/local/bin:/usr/bin:/bin
 RUN uv venv ${VENV_PATH} \
  && chown -R ${USER}:${USER} ${VENV_PATH}
 
+RUN pip3 install --upgrade pip && \
+    git clone https://github.com/egowalk/egowalk-dataset.git /opt/egowalk-dataset && \
+    uv pip install -e /opt/egowalk-dataset
 # Workdir
 WORKDIR /home/${USER}/workspace
 
 # Pre-copy requirements for caching (optional)
 COPY requirements.txt /tmp/requirements.txt
+
 
 # Install deps into the venv via uv pip
 RUN uv pip install --upgrade pip setuptools wheel \

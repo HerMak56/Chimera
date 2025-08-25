@@ -94,7 +94,7 @@ cython_debug/
 .idea/
 *.swp
 *~
-
+#
 # Docker & ClearML config
 configs/clearml.conf
 
@@ -103,5 +103,5 @@ dataset/
 outputs/
 checkpoints/
 artifacts/
-
+runs/
 lightning_logs/

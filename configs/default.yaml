@@ -1,27 +1,87 @@
 seed: 42
+device: "cuda"   # или "cpu"
 
-data:
-  n_train: 50000
-  noise: 0.05
+logger:
+  clearml:
+    enable: true
+    project: "Chimera-SSL"
+    task_name: "vanp-pretext"
+    tags: ["vanp","vicreg"]
 
 model:
-  dim: 512
+  # === image backbone ===
+  img_backbone:
+    name: resnet50
+    pretrained: false   # VANP тренировали с нуля, без ImageNet
+    out_dim: 2048
 
-gating:
-  hidden: 1024
-  temperature: 1.0
+  # === action encoder ===
+  action_encoder_type: attn    # VANP использует Transformer для действий
+  action_type: xy              # будущие позы (x,y)
+  action_size: 2               # размерность действия
+  pred_len: 20                 # будущее окно (5 секунд @ 4 Гц)
+  obs_len: 6                   # прошлое окно (1.5 секунды @ 4 Гц)
+  out_dim: 
 
-losses:
-  vicreg:
-    inv: 25.0
-    var: 25.0
-    cov: 1.0
+  # === embedding sizes ===
+  feature_size: 512            # размерность после resnet/компрессии
+  projection_dim: 1024         # размер проектора (у VANP — 1024)
+  hidden_dim: 1024             # скрытый размер трансформера/MLP
+  lamda: 0.0051                # вес в Barlow/VICReg лоссе
+  corr_neg_one: false
+  freeze_action_backbone: false
+  use_mask: False               # мы хотим прогонять и с масками
 
+  # === transformer для действий ===
+  attn:
+    context_size: 128
+    nhead: 4
+    d_hid: 1024
+    num_layers: 4
+    dropout: 0.4
+    n_registers: 4
+
+  # === mlp вариант (если action_encoder_type=mlp) ===
+  action_backbone:
+    dims: [256, 512, 1024, 2048, 4096, 2048]
+    act: leakyrelu
+    l_act: false
+    bn: true
+    dropout: 0.2
+    bias: false
+
+train_params:
+  epochs: 50
+  vicreg_loss:
+    loss_lambda: 0.7
+    sim_coeff: 25.0
+    std_coeff: 0.5
+    cov_coeff: 25.0
 optim:
-  lr: 3.0e-4
-  wd: 1.0e-4
+  adamw:
+    lr: 5e-4
+    betas:
+      - 0.9
+      - 0.999
+    eps: 1e-8
+    weight_decay: 0.03
+    amsgrad: False
 
-train:
-  steps: 5000
-  batch_size: 256
-  log_every: 50
+
+data:
+  gnm:
+    data_path: "/home/oversir/workspace/dataset"
+    mask_root: "/home/oversir/workspace/dataset/aux_channels/traversability_mask"
+    obs_len: 6
+    pred_len: 20
+    use_yaw: true
+    use_mask: true
+    resize: [98, 126]   # H, W
+
+loader:
+  batch_size: 64
+  num_workers: 12
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+  drop_last: true

@@ -35,6 +35,7 @@ clearml = ["clearml>=1.15"]
 chimera-train = "chimera.train.train:main"
 chimera-eval  = "chimera.scripts.eval_cli:main"
 chimera-pl-train = "chimera.train.pl_cli:main"
+chimera_vanp = "chimera.train.vanp_lighting.train_vanp_lighting:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["chimera"]
